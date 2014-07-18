@@ -28,7 +28,7 @@ class Game:
         self._CLICK_PAUSE = False
         self._RESIZE_PAUSE = False
     def __SETUP__balls(self):
-        num_balls = 10
+        num_balls = 5
         ball_list = []
         for n in range(0, num_balls):
             while True:
@@ -60,51 +60,52 @@ class Game:
     def __SETUP__controls(self):
         self._root_window.bind('<Configure>', self._on_configure)
         self._root_window.bind('<Button-1>', self._on_mouse_click)
-    def GO(self):
-        self._move_balls()
-        self._trace_ball_coordinates()
-    def _trace_ball_coordinates(self):
+    def _trace_ball_position(self):
         for ball in self.balls:
-            N, S, E, W = self._get_ball_edges(ball)
-            print('{:10}:    E {:.2f}   W {:.2f}     N {:.2f}   S {:.2f}'.format(ball.color, W, E, N, S))
+            x, y = ball.center_xy
+            print('{:20} : ( {:.2f} , {:.2f} )'.format(ball.color, x, y))
         print()
-    def _move_balls(self):
+    def GO(self):
         if not self._CLICK_PAUSE and not self._RESIZE_PAUSE:
             self._canvas.delete(tkinter.ALL)
-            self._change_position_of_balls()
-            self._check_if_any_ball_hit_wall()
-            self._change_ball_direction_if_ball_ball_collision()
+            self._change_ball_position()
+            self._change_ball_direction_if_ball_WALL_collision()
+            self._change_ball_direction_if_ball_BALL_collision()
             self._draw_balls()
-            self._trace_ball_coordinates()
+            self._trace_ball_position()
             self._root_window.update_idletasks()
-        self._root_window.after(self._mSPF, self._move_balls)
+        self._root_window.after(self._mSPF, self.GO)
     def _draw_balls(self):
         for ball in self.balls:
             X0, Y0, X1, Y1 = Oval(ball.center_xy, ball.radius_xy).all()
             X0, Y0 = Coordinate((X0, Y0)).absolute(self._get_WH())
             X1, Y1 = Coordinate((X1, Y1)).absolute(self._get_WH())
             self._canvas.create_oval(X0, Y0, X1, Y1, fill=ball.color)
-    def _change_position_of_balls(self):
+    def _change_ball_position(self):
         for ball in self.balls:
             x, y = ball.center_xy
             dx, dy = ball.velocity_xy
             ball.center_xy = (x + dx, y + dy)
-    def _check_if_any_ball_hit_wall(self):
-        for ball in self.balls:
-            N, S, E, W = self._get_ball_edges(ball)
+    def _change_ball_direction_if_ball_WALL_collision(self):
+        for i in range(0, len(self.balls)):
+            ball = self.balls[i]
+            x, y = ball.center_xy
+            rx, ry = ball.radius_xy
             dx, dy = ball.velocity_xy
-            if W < 0 or E > 1:
+            if self._check_for_ball_wall_collision(x, rx):
                 dx *= -1
-            if N < 0 or S > 1:
+            if self._check_for_ball_wall_collision(y, ry):
                 dy *= -1
             ball.velocity_xy = (dx, dy)
-    def _get_ball_edges(self, ball):
-        x, y = ball.center_xy
-        rx, ry = ball.radius_xy
-        N, S = y - ry, y + ry
-        W, E = x - rx, x + rx
-        return (N, S, E, W)
-    def _change_ball_direction_if_ball_ball_collision(self):
+            self.balls[i] = ball
+    def _check_for_ball_wall_collision(self, z, rz):
+        if z - rz < 0:
+            return True
+        elif z + rz > 1:
+            return True
+        else:
+            return False
+    def _change_ball_direction_if_ball_BALL_collision(self):
         index_combo_list = list(combinations(range(0, len(self.balls)), 2))
         for i, j in index_combo_list:
             ball_A = self.balls[i]
@@ -113,8 +114,8 @@ class Game:
             dx, dy = ball_B.velocity_xy
             collision = self._check_for_ball_ball_collision(ball_A, ball_B)
             if collision:
-                dx, dy = dx * -1, dy * -1
                 DX, DY = DX * -1, DY * -1
+                dx, dy = dx * -1, dy * -1
             ball_A.velocity_xy = DX, DY
             ball_B.velocity_xy = dx, dy
             self.balls[i] = ball_A
