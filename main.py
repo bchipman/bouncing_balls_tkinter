@@ -20,8 +20,9 @@ class Game:
         self.game_window = Window(self.window_options)
         self.balls = Balls(self.ball_options)
         self.collisions = Collisions(self.balls.ball_list, self.collision_options)
+        self.collisions2 = Collisions2()
     def GAME_LOOP(self):
-        ball_list = CollisionHandler().handle_any_collisions(self.balls.ball_list, self.collisions)
+        ball_list = CollisionHandler().handle_any_collisions(self.balls.ball_list, self.collisions, self.collisions2)
         ball_list = self.balls.advance_ball_positions(ball_list)
         self.game_window.DRAW_BALLS(ball_list)
         self.game_window.root_window.after(self.game_window._mSPF, self.GAME_LOOP)
@@ -174,9 +175,11 @@ class Ball:
         self.number_hit = 1
         self.total_hits += 1
 class CollisionHandler:
-    def handle_any_collisions(self, ball_list, collisions):
+    def handle_any_collisions(self, ball_list, collisions, collisions2):
+        collisions2.reset_this_frame_list()
         ball_list = self._handle_wall_collision(ball_list)
-        ball_list = self._handle_ball_collision(ball_list, collisions)
+        ball_list = self._handle_ball_collision(ball_list, collisions, collisions2)
+        collisions2.update_last_50_frames_lists()
         return ball_list
     def _handle_wall_collision(self, ball_list):
         for i in range(0, len(ball_list)):
@@ -194,13 +197,15 @@ class CollisionHandler:
             ball.velocity = (dx, dy)
             ball_list[i] = ball
         return ball_list
-    def _handle_ball_collision(self, ball_list, collisions):
+    def _handle_ball_collision(self, ball_list, collisions, collisions2):
         index_combo_list = list(combinations(range(0, len(ball_list)), 2))
         for i, j in index_combo_list:
             ball_A, ball_B = ball_list[i], ball_list[j]
             DX, DY = ball_A.velocity
             dx, dy = ball_B.velocity
             if self._ball_collision(ball_A, ball_B):
+                collisions2.add_to_collisions_this_frame(ball_A, ball_B)
+                self._add_to_collisions_this_frame(ball_A, ball_B)
                 if collisions.trace:
                     self._trace_collisions(ball_A, ball_B)
                 ball_A, ball_B = self._update_last_hits(ball_A, ball_B)
@@ -227,12 +232,6 @@ class CollisionHandler:
             return True
         else:
             return False
-    def _add_to_collisions_this_frame(self, ball_A, ball_B):
-        ij = calculations.ball_order(ball_A, ball_B)
-        self._collisions_this_frame_li.append(ij)
-    def _update_colisions_in_recent_frames(self):
-        pass
-        pass
     def _update_last_hits(self, ball_A, ball_B):
         if ball_A.last_hit == ball_B:
             ball_A.increment_last_hit()
@@ -261,6 +260,18 @@ class CollisionHandler:
         B = '{}-{}'.format(ball_B.n, ball_B.color)
         star = '*' * 20
         print('{} BREAKING {} and {}!! {}'.format(star, A, B, star))
+class Collisions2:
+    def __init__(self):
+        self.collisions_last_50_frames = [[] for i in range(0, 50)]
+    def reset_this_frame_list(self):
+        self._collisions_this_frame = []
+    def update_last_50_frames_lists(self):
+        old_list = self.collisions_last_50_frames
+        new_list = old_list[1::] + [self._collisions_this_frame]
+        self.collisions_last_50_frames = new_list
+    def add_to_collisions_this_frame(self, ball_A, ball_B):
+        ij = calculations.ball_order(ball_A, ball_B)
+        self._collisions_this_frame.append(ij)
 class Collisions:
     def __init__(self, ball_list, options):
         self.trace = options.trace
