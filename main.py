@@ -1,56 +1,55 @@
-import tkinter
-from tkinter import N, S, E, W
-from random import uniform as RND
-from random import choice as PICK
-from copy import deepcopy
-from threading import Timer
-from itertools import combinations
-from tk_colors import select_colors
 from functools import partial
-from coordinate import Coordinate, Oval
+from itertools import combinations
 from math import sqrt
-class View:
+from coordinate import Coordinate, Oval
+from random import choice as PICK
+from random import uniform as RND
+from threading import Timer
+from tk_colors import select_colors
+from tkinter import N, S, E, W
+import tkinter
+class Window:
     def __init__(self):
-        self.__SETUP__variables()
-        self.__SETUP__window()
-        self.__SETUP__controls()
-    def __SETUP__variables(self):
+        self._SETUP_variables()
+        self._SETUP_window()
+        self._SETUP_controls()
+    def _SETUP_variables(self):
         self._bg_color = 'grey'
         self._FPS = 100
-        self._mSPF = self._FPS_to_mSPF(self._FPS)
+        self._mSPF = self._CALC_FPS_to_mSPF(self._FPS)
         self._CLICK_PAUSE = False
         self._RESIZE_PAUSE = False
-    def __SETUP__window(self):
+    def _SETUP_window(self):
         self._root_window = tkinter.Tk()
         self._canvas = tkinter.Canvas(master=self._root_window, background=self._bg_color, highlightthickness=0, height=400, width=400)
         self._canvas.grid(column=0, row=0, sticky=N + S + E + W)
         self._root_window.columnconfigure(index=0, weight=1)
         self._root_window.rowconfigure(index=0, weight=1)
-    def __SETUP__controls(self):
-        self._root_window.bind('<Configure>',   self.__CTRL__on_configure)
-        self._root_window.bind('<Button-1>',    self.__CTRL__on_mouse_click_left)
-    def __CTRL__on_configure(self, event):
+    def _SETUP_controls(self):
+        self._root_window.bind('<Configure>',   self._CTRL_on_configure)
+        self._root_window.bind('<Button-1>',    self._CTRL_on_mouse_click_left)
+    def _CTRL_on_configure(self, event):
         self._RESIZE_PAUSE = True
-        t = Timer(0.5, self.__CTRL__on_configure___set_resize_pause)
+        t = Timer(0.5, self._CTRL_on_configure_set_resize_pause)
         t.start()
-    def __CTRL__on_configure___set_resize_pause(self):
+    def _CTRL_on_configure_set_resize_pause(self):
         self._RESIZE_PAUSE = False
-    def __CTRL__on_mouse_click_left(self, event):
+    def _CTRL_on_mouse_click_left(self, event):
         if self._CLICK_PAUSE == True:
             self._CLICK_PAUSE = False
         elif self._CLICK_PAUSE == False:
             self._CLICK_PAUSE = True
-    def _FPS_to_mSPF(self, FPS):
+    def _CALC_FPS_to_mSPF(self, FPS):
         return int((1 / FPS) * 1000)
-    def _get_WH(self):
+    def _GET_WH(self):
         return (self._root_window.winfo_width(), self._root_window.winfo_height())
-    def draw_balls(self, balls):
+    def _DO_draw_balls(self, balls):
         for ball in balls:
             X0, Y0, X1, Y1 = Oval(ball.center_xy, ball.radius_xy).all()
-            X0, Y0 = Coordinate((X0, Y0)).absolute(self._get_WH())
-            X1, Y1 = Coordinate((X1, Y1)).absolute(self._get_WH())
+            X0, Y0 = Coordinate((X0, Y0)).absolute(self._GET_WH())
+            X1, Y1 = Coordinate((X1, Y1)).absolute(self._GET_WH())
             self._canvas.create_oval(X0, Y0, X1, Y1, fill=ball.color)
-    def trace_ball_position(self, balls):
+    def _DEBUG_trace_ball_position(self, balls):
         for ball in balls:
             x, y = ball.center_xy
             print('{:20} : ( {:.2f} , {:.2f} )'.format(ball.color, x, y))
@@ -58,13 +57,13 @@ class View:
     def GO(self, balls, trace=False):
         if not self._CLICK_PAUSE and not self._RESIZE_PAUSE:
             self._canvas.delete(tkinter.ALL)
-            self.draw_balls(balls)
+            self._DO_draw_balls(balls)
             if trace:
-                self.trace_ball_position(balls)
+                self._DEBUG_trace_ball_position(balls)
             self._root_window.update_idletasks()
     def MAINLOOP(self):
         self._root_window.mainloop()
-class Model:
+class Logic:
     def __init__(self):
         self._num_balls = 25
         self.__SETUP__balls()
@@ -140,14 +139,14 @@ class Model:
                 ball_A, ball_B = self._update_last_hits(ball_A, ball_B)
                 blacklisted = self._blacklist(ball_A, ball_B)
                 if not blacklisted:
-                    DXDY, dxdy = self.new_velocity(ball_A, ball_B)
+                    DXDY, dxdy = self._CALC_new_velocity(ball_A, ball_B)
                     DX, DY = DXDY
                     dx, dy = dxdy
             ball_A.velocity_xy = DX, DY
             ball_B.velocity_xy = dx, dy
             self.balls[i] = ball_A
             self.balls[j] = ball_B
-    def new_velocity(self, ball_A, ball_B):
+    def _CALC_new_velocity(self, ball_A, ball_B):
         x1, y1 = ball_A.center_xy
         x2, y2 = ball_B.center_xy
         v1 = ball_A.velocity_xy
@@ -158,10 +157,10 @@ class Model:
         n_mag = sqrt(n[0] ** 2 + n[1] ** 2)  # magnitude of normal vector
         un = n[0] / n_mag, n[1] / n_mag  # unit vector of n
         ut = -1 * un[1], un[0]  # unit tangent vector of n
-        v1n = self.dot_product(un, v1)
-        v1t = self.dot_product(ut, v1)
-        v2n = self.dot_product(un, v2)
-        v2t = self.dot_product(ut, v2)
+        v1n = self._CALC_dot_product(un, v1)
+        v1t = self._CALC_dot_product(ut, v1)
+        v2n = self._CALC_dot_product(un, v2)
+        v2t = self._CALC_dot_product(ut, v2)
         v1t_ = v1t
         v2t_ = v2t
         v1n_ = (v1n * (m1 - m2) + 2 * m2 * v2n) / (m1 + m2)
@@ -173,7 +172,7 @@ class Model:
         _v1_ = v1n__[0] + v1t__[0], v1n__[1] + v1t__[1]
         _v2_ = v2n__[0] + v2t__[0], v2n__[1] + v2t__[1]
         return (_v1_, _v2_)
-    def dot_product(self, vector_1, vector_2):
+    def _CALC_dot_product(self, vector_1, vector_2):
         x, y = vector_1
         X, Y = vector_2
         return x * X + y * Y
@@ -223,7 +222,7 @@ class Ball:
         self.radius_xy = radius
         self.velocity_xy = velocity
         self.color = color
-        self.edges = self._calculate_edge_values()
+        self.edges = self._CALC_edge_values()
         self.last_hit = self
         self.number_hit = 0
         self.blacklist = []
@@ -245,7 +244,7 @@ class Ball:
         y = '{:.3f}'.format(y)
         position = 'Position: ' + x + ', ' + y
         return '      '.join([number, position, radius, velocity, color])
-    def _calculate_edge_values(self):
+    def _CALC_edge_values(self):
         x, y = self.center_xy
         rx, ry = self.radius_xy
         U = y - ry
@@ -257,24 +256,21 @@ class Ball:
         x, y = self.center_xy
         dx, dy = self.velocity_xy
         self.center_xy = (x + dx, y + dy)
-        self.edges = self._calculate_edge_values()
+        self.edges = self._CALC_edge_values()
     def increment_last_hit(self):
         self.number_hit += 1
     def set_new_last_hit(self, ball):
         self.last_hit = ball
         self.number_hit = 1
-    def blacklist(self, ball):
-        pass
 class Game:
     def __init__(self):
-        self.game_model = Model()
-        self.game_view = View()
+        self.game_logic = Logic()
+        self.game_window = Window()
     def _play_game(self):
-        balls = self.game_model.MOVE()
-        self.game_view.GO(balls)
-        self.game_view._root_window.after(self.game_view._mSPF, self._play_game)
+        balls = self.game_logic.MOVE()
+        self.game_window.GO(balls)
+        self.game_window._root_window.after(self.game_window._mSPF, self._play_game)
     def START(self):
         self._play_game()
-        self.game_view.MAINLOOP()
-if __name__ == '__main__':
-    Game().START()
+        self.game_window.MAINLOOP()
+Game().START()
