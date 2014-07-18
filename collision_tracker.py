@@ -3,10 +3,11 @@ import itertools
 class CollisionTracker:
     def __init__(self, options, balls):
         self.original_ball_colors = [b.color for b in balls]
-        self.blacklisted_collisions = {}
-        self.blacklisted_collisions2 = []
+        self.blacklisted_collisions = []
         self.NUMFRAMESNOCOLLISIONS = 7
+        self.COLLISION_PAUSE = False
     def __call__(self, balls):
+        self._remove_pair_from_blacklist_if_collision_is_over(balls)
         balls = self._set_or_change_ball_color(balls)
         balls = self.handle_wall_collisions(balls)
         balls = self.handle_ball_collisions(balls)
@@ -37,6 +38,7 @@ class CollisionTracker:
             balls[i] = ball
         return balls
     def handle_ball_collisions(self, balls):
+        self.COLLISION_PAUSE = False
         index_combo_list = list(itertools.combinations(range(0, len(balls)), 2))
         for i, j in index_combo_list:
             A, B = balls[i], balls[j]
@@ -46,7 +48,8 @@ class CollisionTracker:
                     self.blacklist_collision(A, B)
                     Av, Bv = calculations.new_velocity(A, B)
             elif self.blacklisted(A, B):
-                self.decrement_blacklisted_collision_counter(A, B)
+                if calculations.ball_collision(A, B):
+                    self.COLLISION_PAUSE = True
             A.velocity, B.velocity = Av, Bv
             balls[i], balls[j] = A, B
         return balls
@@ -58,10 +61,10 @@ class CollisionTracker:
             return False
     def blacklist_collision(self, A, B):
         ball_pair = calculations.ball_order(A, B)
-        self.blacklisted_collisions[ball_pair] = self.NUMFRAMESNOCOLLISIONS
-    def decrement_blacklisted_collision_counter(self, A, B):
-        ball_pair = calculations.ball_order(A, B)
-        if self.blacklisted_collisions[ball_pair] > 0:
-            self.blacklisted_collisions[ball_pair] -= 1
-        elif self.blacklisted_collisions[ball_pair] == 0:
-            del self.blacklisted_collisions[ball_pair]
+        self.blacklisted_collisions.append(ball_pair)
+    def _remove_pair_from_blacklist_if_collision_is_over(self, balls):
+        for i, j in self.blacklisted_collisions:
+            print(i, j)
+            if not calculations.ball_collision(balls[i], balls[j]):
+                pair = calculations.ball_order(balls[i], balls[j])
+                self.blacklisted_collisions.remove(pair)
