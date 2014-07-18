@@ -15,22 +15,8 @@ class Ball:
         self.radius_xy = radius
         self.velocity_xy = velocity
         self.color = color
-        self.recent_wall_collision = False
-        self.recent_ball_collision = False
     def set_color(self, color):
         self.color = color
-    def start_wall_collision_timer(self):
-        self.recent_wall_collision = True
-        wall_timer = Timer(0.1, self.reset_recent_wall_collision)
-        wall_timer.start()
-    def reset_recent_wall_collision(self):
-        self.recent_wall_collision = False
-    def start_ball_collision_timer(self):
-        self.recent_ball_collision = True
-        ball_timer = Timer(25 / 1000, self.reset_recent_ball_collision)
-        ball_timer.start()
-    def reset_recent_ball_collision(self):
-        self.recent_ball_collision = False
 class Game:
     def __init__(self):
         self.__SETUP__variables()
@@ -65,7 +51,7 @@ class Game:
             ball_timers_dict[index_combo] = recent_collision
         self._ball_timers_dict = ball_timers_dict
     def __SETUP__add_ball_wall_entries_to_collision_timer_dictionary(self):
-        di_copy = deepcopy(self._ball_timers_dict.copy)
+        di_copy = deepcopy(self._ball_timers_dict)
         del self._ball_timers_dict
         for n in range(0, len(self.balls)):
             di_copy[(n, 'NS')] = False
@@ -128,14 +114,15 @@ class Game:
             dx, dy = ball.velocity_xy
             if self._ball_wall_collision(x, rx):
                 if self._recent_ball_collision((i, 'EW')) == False:
-                    timer = Timer(250, 1000, partial(self._set_wall_collision_timer_bool_to_False, n=i, direction='EW'))
-                    timer.start()
+                    self._set_wall_collision_timer_bool_to_True(n=i, direction='EW')
+                    timer_EW = Timer(250 / 1000, partial(self._set_wall_collision_timer_bool_to_False, n=i, direction='EW'))
+                    timer_EW.start()
                     dx *= -1
             if self._ball_wall_collision(y, ry):
                 if self._recent_ball_collision((i, 'NS')) == False:
                     self._set_wall_collision_timer_bool_to_True(n=i, direction='NS')
-                    timer = Timer(250, 1000, partial(self._set_wall_collision_timer_bool_to_False, n=i, direction='NS'))
-                    timer.start()
+                    timer_NS = Timer(250 / 1000, partial(self._set_wall_collision_timer_bool_to_False, n=i, direction='NS'))
+                    timer_NS.start()
                     dy *= -1
             ball.velocity_xy = (dx, dy)
             self.balls[i] = ball
@@ -150,8 +137,6 @@ class Game:
             return True
         else:
             return False
-    def _recent_wall_collision(self, ball):
-        return ball.recent_wall_collision
     def _ball_BALL_collision_main(self):
         index_combo_list = list(combinations(range(0, len(self.balls)), 2))
         for i, j in index_combo_list:
